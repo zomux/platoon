@@ -659,7 +659,7 @@ if __name__ == '__main__':
     # Each worker **MUST** be seeded with a different number, so that
     # they do not draw the same minibatches!
     SEED = 123
-    numpy.random.seed(SEED + worker.global_rank)
+    numpy.random.seed(SEED)
 
     train_lstm(valid_sync=args.valid_sync, test_size=500,
                param_sync_api=args.param_sync_api)

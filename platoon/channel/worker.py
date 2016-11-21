@@ -113,9 +113,7 @@ class Worker(object):
         try:
             self._register_to_platoon()
         except Exception as exc:
-            print(PlatoonWarning("Failed to register in a local GPU comm world.", exc),
-                  file=sys.stderr)
-            print(PlatoonWarning("Platoon `all_reduce` interface will not be functional."),
+            print(PlatoonWarning("As pygpu is not is not imported, `all_reduce` will not be functional."),
                   file=sys.stderr)
             self._local_comm = None
         self._shmem_names = dict()

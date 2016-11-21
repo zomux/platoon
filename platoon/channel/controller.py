@@ -86,6 +86,7 @@ class Controller(object):
     def __init__(self, control_port=5567, data_port=None, data_hwm=10,
                  devices=None, experiment_name='',
                  log_directory='', worker_args='', multi=False):
+        self._should_stop = False
         self._workers = set()
         self._need_init = True
 
@@ -266,11 +267,15 @@ class Controller(object):
         """
         try:  # spin spin spin
             self._success = 2
-            while self._workers:  # spin while we have still children to watch for
+            while not self._should_stop or self._workers:  # spin while we have still children to watch for
+                pid = 0
                 try:
                     pid, status = os.waitpid(-1, os.WNOHANG)
                 except OSError as exc:
-                    raise PlatoonError("while waiting for a child", exc)
+                    # raise PlatoonError("while waiting for a child", exc)
+                    # Just no child processes
+                    pass
+
                 if pid != 0:  # If a status change has happened at a child
                     if os.WIFEXITED(status):
                         self._workers.discard(pid)
@@ -292,6 +297,8 @@ class Controller(object):
                     continue
                 except zmq.ZMQError as exc:
                     raise PlatoonError("while receiving using ZMQ socket", exc)
+                if query['worker_id'] not in self._workers:
+                    self._workers.add(query['worker_id'])
 
                 # try default interface, it may raise PlatoonError
                 response = self._handle_base_control(query['req'],
@@ -406,8 +413,11 @@ class Controller(object):
             self.asocket.close()
             self.acontext.term()
         try:
-            self._lock.close()
-            self._lock.unlink()
+            if hasattr(self._lock, "close"):
+                self._lock.close()
+                self._lock.unlink()
+            elif hasattr(self._lock, "release") and self._lock.locked():
+                self._lock.release()
         except posix_ipc.ExistentialError:
             pass
         for shmref in self._shmrefs.values():
